@@ -1,0 +1,146 @@
+{%extends 'main/base.html'%}
+{%block content%}
+    <div class='alert alert-success' role='alert'></div>
+    <div class='alert alert-danger' role='alert'></div>
+    <div class='container'>
+        
+        <div class="tabs">
+            {%for file in json_files_in_dir%}
+            <div class="tab">
+                <a id='first' data-filename='{{file}}' data-save-url="{{url_for('main.save_json', filename=file)}}" class='json-file-tab' href="{{url_for('main.get_json_file', filename=file)}}">{{file}}</a>
+            </div>
+            {%endfor%}
+        </div>
+        <div class="buttons-div">
+            <a id='save-button' href="#">Save</a>
+            <a id='add-row' href="#">Add row</a>
+        </div>
+        <div class="table-div">
+            <table id="table" class='table'></table>
+        </div>
+        
+    </div>
+    
+
+    
+    <script>
+        $(document).ready(function(){
+            var all_tabs = $('.json-file-tab');
+            var columns;
+            var rows;
+            var current_json_file_url;
+            var current_json_file_save_url;
+            function add_styling(){
+                $('td').each(function(){
+                    alert($(this).text());
+                });
+            };
+            function delete_row(){
+                $('button').on('click', function(){
+                    $('table').rsLiteGrid('delRow', $(this))
+                });
+            };
+            function render_table(){
+                $('table').rsLiteGrid({
+                        cols: columns,
+                    });
+                    $('table').addSortWidget('{{url_for("static", filename="javascript/jQuery-Sortable-Table-Plugin")}}');
+                    //set table data
+                    rowData = $('table').rsLiteGrid('setData',rows);
+                    delete_row();
+            };
+            function save_table(display_alert=false){
+                let get_table_data = JSON.stringify($('table').rsLiteGrid('getData'));
+                $.ajax({
+                    url: current_json_file_save_url,
+                    type: 'POST',
+                    contenType: 'application/json',
+                    data: {'data': get_table_data},
+                    success: function(response){
+                        if (display_alert == true){
+                            if (response.success){
+                            $('.alert-success').text(response.success);
+                            $('.alert-success').slideDown().delay(1000).slideUp().hide(0);
+                        }
+                        else if(response.error){
+                            $('.alert-error').text(response.error);
+                            $('.alert-error').slideDown().delay(1000).slideUp().hide(0);
+                        }
+                        }
+                        
+                        
+                    }
+                });
+            };
+            $.ajax({
+            url: $('.json-file-tab').first().attr('href'),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response){
+                columns = JSON.parse(response.columns);
+                rows = JSON.parse(response.rows);
+                //create table
+                render_table();
+                //set curent json name
+                current_json_file_url = $('#first').attr('href');
+                current_json_file_save_url = $('#first').attr('data-save-url');
+            }
+            });
+
+            $('.json-file-tab').on('click', function(event){
+                $('#table').empty();
+                current_json_file_url = $(this).attr('href');
+                $.ajax({
+                url: current_json_file_url,
+                type: 'GET',
+                dataType: 'json',
+                
+                success: function(response){
+                    columns = JSON.parse(response.columns);
+                    rows = JSON.parse(response.rows);
+                    //create table
+                   
+                    render_table();
+                }
+            });
+
+                    //set curent json name
+                    current_json_file_url = $(this).attr('href');
+                    current_json_file_save_url = $(this).attr('data-save-url');
+                    event.preventDefault();
+            });
+
+            $('#save-button').on('click', function(event){
+                let get_table_data = JSON.stringify($('table').rsLiteGrid('getData'));
+                $.ajax({
+                    url: current_json_file_save_url,
+                    type: 'POST',
+                    contenType: 'application/json',
+                    data: {'data': get_table_data},
+                    success: function(response){
+                        if (response.success){
+                            $('.alert-success').text(response.success);
+                            $('.alert-success').slideDown().delay(1000).slideUp().hide(0);
+                        }
+                        else if(response.error){
+                            $('.alert-error').text(response.error);
+                            $('.alert-error').slideDown().delay(1000).slideUp().hide(0);
+                        }
+                        
+                    }
+                });
+                
+                event.preventDefault();
+            });
+            
+            $('#add-row').on('click', function(event){
+                $('table').rsLiteGrid('addRow', rowData);
+                delete_row();
+                event.preventDefault();
+            })
+            
+            
+        });
+        
+    </script>
+{%endblock%}
